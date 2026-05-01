@@ -35,7 +35,7 @@ html,body{
   overflow:hidden;
 }
 
-/* ââ LEFT: pull-to-shoot cue control ââ */
+/* ── LEFT: pull-to-shoot cue control ── */
 #cue-ctrl{
   width:60px;
   height:100%;
@@ -97,7 +97,7 @@ html,body{
   margin-top:4px;
 }
 
-/* ââ CENTER: canvas area ââ */
+/* ── CENTER: canvas area ── */
 #cw{
   flex:1;
   height:100%;
@@ -107,7 +107,7 @@ html,body{
 }
 canvas{display:block;touch-action:none;}
 
-/* ââ RIGHT: HUD ââ */
+/* ── RIGHT: HUD ── */
 #side-hud{
   width:72px;
   height:100%;
@@ -183,7 +183,7 @@ canvas{display:block;touch-action:none;}
     <path d="M30 34 L38 42 M38 34 L30 42" stroke="#ffd700" stroke-width="2.5" stroke-linecap="round"/>
     <path d="M10 38 Q10 44 16 44 L26 44" stroke="#ffd700" stroke-width="2.5" stroke-linecap="round" fill="none"/>
   </svg>
-  <div>è«æè½ææ©çºæ©«å</div>
+  <div>請旋轉手機為橫向</div>
   <div style="font-size:12px;color:#445;font-weight:400">Please rotate to landscape</div>
 </div>
 
@@ -196,7 +196,7 @@ canvas{display:block;touch-action:none;}
       </div>
       <div id="pull-bar"></div>
     </div>
-    <div id="pull-label">ä¸æ<br>æç</div>
+    <div id="pull-label">下拉<br>擊球</div>
     <div id="pull-pct">0%</div>
   </div>
 
@@ -209,14 +209,14 @@ canvas{display:block;touch-action:none;}
       <div class="p-color-bar p1-bar"></div>
       <div class="plbl">PLAYER 1</div>
       <div class="pname active-p1" id="pn1">P1</div>
-      <div class="ptype" id="pt1">æªå®</div>
+      <div class="ptype" id="pt1">未定</div>
       <div class="pballs" id="pb1"></div>
     </div>
 
     <div class="divider"></div>
 
     <div id="mid-hud">
-      <div id="msg-side">çæº<br>ä¸¦æç</div>
+      <div id="msg-side">瞄準<br>並擊球</div>
       <div id="foul-side"></div>
     </div>
 
@@ -224,7 +224,7 @@ canvas{display:block;touch-action:none;}
 
     <div class="phud">
       <div class="pballs" id="pb2"></div>
-      <div class="ptype" id="pt2">æªå®</div>
+      <div class="ptype" id="pt2">未定</div>
       <div class="pname inactive" id="pn2">P2</div>
       <div class="plbl">PLAYER 2</div>
       <div class="p-color-bar p2-bar"></div>
@@ -234,9 +234,9 @@ canvas{display:block;touch-action:none;}
 
 <div id="ov">
   <h1>8 BALL</h1>
-  <p>&#127921; å®æ©éäºº Â· æ©«åéç©</p>
-  <p class="hint">å·¦å´ä¸æçææç Â· å¨å°é¢æåçæº</p>
-  <button class="obtn" id="startBtn">éå§éæ²</button>
+  <p>&#127921; 單機雙人 · 橫向遊玩</p>
+  <p class="hint">左側下拉球杆擊球 · 在台面拖動瞄準</p>
+  <button class="obtn" id="startBtn">開始遊戲</button>
 </div>
 
 <script>
@@ -274,7 +274,7 @@ var cueStickWrap=document.getElementById('cue-stick-wrap');
 var pullBar=document.getElementById('pull-bar');
 var pullPct=document.getElementById('pull-pct');
 
-// ââ Setup ââââââââââââââââââââââââââââââââââââââââââââââââ
+// ── Setup ────────────────────────────────────────────────
 function setup(){
   var cw=document.getElementById('cw');
   var r=cw.getBoundingClientRect();
@@ -312,334 +312,7 @@ function getCue(){
   return null;
 }
 
-// ââ Physics ââââââââââââââââââââââââââââââââââââââââââââââ
-function step(){
-  var i,j,a,b2,dx,dy,d,mn,nx,ny,ov,dot;
-  var L=BRD,R=BRD+TW,T=BRD,Bo=BRD+TH;
-
-  // 1. Move & friction
-  for(i=0;i<balls.length;i++){
-    a=balls[i];if(a.out)continue;
-    a.x+=a.vx;a.y+=a.vy;
-    a.vx*=FRIC;a.vy*=FRIC;
-    // Only stop if truly slow (don't kill secondary hits prematurely)
-    if(Math.abs(a.vx)<MINSPD&&Math.abs(a.vy)<MINSPD){a.vx=0;a.vy=0;}
-    // Wall bounce (cushion restitution ~0.75)
-    if(a.x-BR<L){a.x=L+BR;a.vx=Math.abs(a.vx)*0.75;}
-<html lang="zh-TW">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, orientation=landscape">
-<title>8 Ball Pool</title>
-<style>
-*{margin:0;padding:0;box-sizing:border-box;}
-html,body{
-  width:100%;height:100%;
-  overflow:hidden;
-  background:#0a0e14;
-  touch-action:none;
-  user-select:none;-webkit-user-select:none;
-  font-family:'Arial Black',Arial,sans-serif;
-}
-/* Force landscape */
-#rotate-msg{
-  display:none;
-  position:fixed;inset:0;
-  background:#0a0e14;
-  color:#ffd700;
-  font-size:18px;font-weight:900;letter-spacing:2px;
-  flex-direction:column;align-items:center;justify-content:center;
-  z-index:999;gap:16px;
-}
-#rotate-msg svg{opacity:.6;}
-@media(orientation:portrait){
-  #rotate-msg{display:flex;}
-  #main{display:none;}
-}
-#main{
-  width:100vw;height:100vh;
-  display:flex;flex-direction:row;
-  overflow:hidden;
-}
-
-/* ââ LEFT: pull-to-shoot cue control ââ */
-#cue-ctrl{
-  width:60px;
-  height:100%;
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  justify-content:center;
-  background:linear-gradient(90deg,#0d1017 0%,transparent 100%);
-  flex-shrink:0;
-  position:relative;
-  z-index:10;
-  touch-action:none;
-}
-#cue-track{
-  width:34px;
-  height:180px;
-  background:#111820;
-  border-radius:17px;
-  border:1px solid #2a3445;
-  position:relative;
-  overflow:visible;
-  cursor:pointer;
-}
-/* Cue stick icon inside track */
-#cue-stick-wrap{
-  position:absolute;
-  left:50%;
-  top:14px;
-  transform:translateX(-50%);
-  display:flex;flex-direction:column;align-items:center;
-  transition:top .05s;
-  pointer-events:none;
-}
-.cue-img{
-  width:10px;
-  height:120px;
-  border-radius:5px 5px 2px 2px;
-  background:linear-gradient(180deg,#3399ff 0%,#3399ff 18%,#c49a30 28%,#9a7520 55%,#6a4a10 85%,#3a2808 100%);
-  box-shadow:2px 0 8px rgba(0,0,0,.5);
-  transition:background .4s;
-}
-#pull-bar{
-  width:22px;
-  height:0;
-  background:linear-gradient(180deg,#00c853,#ffd600,#ff1744);
-  border-radius:0 0 11px 11px;
-  position:absolute;
-  bottom:14px;left:50%;
-  transform:translateX(-50%);
-  transition:height .05s,background .1s;
-  pointer-events:none;
-}
-#pull-label{
-  font-size:9px;color:#445;letter-spacing:1px;
-  margin-top:10px;text-align:center;line-height:1.4;
-}
-#pull-pct{
-  font-size:11px;font-weight:900;color:#ffd700;
-  margin-top:4px;
-}
-
-/* ââ CENTER: canvas area ââ */
-#cw{
-  flex:1;
-  height:100%;
-  min-width:0;
-  position:relative;
-  display:flex;align-items:center;justify-content:center;
-}
-canvas{display:block;touch-action:none;}
-
-/* ââ RIGHT: HUD ââ */
-#side-hud{
-  width:72px;
-  height:100%;
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  justify-content:space-between;
-  padding:10px 4px;
-  background:linear-gradient(270deg,#0d1017 0%,transparent 100%);
-  flex-shrink:0;
-}
-.phud{
-  display:flex;flex-direction:column;align-items:center;gap:4px;
-  width:100%;
-}
-.p-color-bar{
-  width:36px;height:4px;border-radius:2px;
-}
-.p1-bar{background:linear-gradient(90deg,#3399ff,#66bbff);}
-.p2-bar{background:linear-gradient(90deg,#ff3355,#ff6680);}
-.plbl{font-size:9px;color:#445;letter-spacing:1px;}
-.pname{
-  font-size:13px;font-weight:900;color:#fff;letter-spacing:1px;
-  padding:2px 8px;border-radius:4px;
-  transition:background .3s,color .3s;
-}
-.pname.active-p1{background:#3399ff;color:#fff;}
-.pname.active-p2{background:#ff3355;color:#fff;}
-.pname.inactive{background:transparent;color:#445;}
-.pballs{display:flex;gap:2px;flex-wrap:wrap;justify-content:center;min-height:12px;}
-.mb{width:10px;height:10px;border-radius:50%;border:1px solid rgba(255,255,255,.2);}
-.ptype{font-size:8px;color:#668;letter-spacing:.5px;text-align:center;}
-
-.divider{width:80%;height:1px;background:#1a2230;}
-
-#mid-hud{
-  display:flex;flex-direction:column;align-items:center;gap:3px;
-  text-align:center;
-}
-#msg-side{font-size:9px;color:#aaa;font-weight:700;letter-spacing:.5px;line-height:1.4;text-align:center;max-width:60px;}
-#foul-side{font-size:8px;color:#ff4455;font-weight:700;line-height:1.3;text-align:center;max-width:64px;min-height:24px;}
-
-/* Overlay */
-#ov{
-  position:fixed;inset:0;
-  background:rgba(0,0,0,.88);
-  display:flex;flex-direction:column;
-  align-items:center;justify-content:center;
-  z-index:100;gap:12px;
-}
-#ov h1{font-size:36px;color:#ffd700;letter-spacing:5px;text-shadow:0 0 24px rgba(255,215,0,.5);}
-#ov p{color:#aaa;font-size:13px;letter-spacing:1px;text-align:center;padding:0 20px;}
-.win{font-size:22px;font-weight:900;color:#fff;letter-spacing:3px;}
-.obtn{
-  padding:10px 28px;
-  background:linear-gradient(135deg,#ffd700,#ff8c00);
-  border:none;border-radius:7px;
-  font-size:16px;font-weight:900;color:#000;
-  cursor:pointer;letter-spacing:2px;
-  box-shadow:0 3px 16px rgba(255,215,0,.35);
-  touch-action:manipulation;
-}
-.obtn:active{transform:scale(.95);}
-.hint{font-size:11px;color:#445;}
-</style>
-</head>
-<body>
-
-<!-- Portrait warning -->
-<div id="rotate-msg">
-  <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
-    <rect x="8" y="4" width="32" height="20" rx="3" stroke="#ffd700" stroke-width="2.5"/>
-    <path d="M30 34 L38 42 M38 34 L30 42" stroke="#ffd700" stroke-width="2.5" stroke-linecap="round"/>
-    <path d="M10 38 Q10 44 16 44 L26 44" stroke="#ffd700" stroke-width="2.5" stroke-linecap="round" fill="none"/>
-  </svg>
-  <div>è«æè½ææ©çºæ©«å</div>
-  <div style="font-size:12px;color:#445;font-weight:400">Please rotate to landscape</div>
-</div>
-
-<div id="main">
-  <!-- Left pull-to-shoot -->
-  <div id="cue-ctrl">
-    <div id="cue-track">
-      <div id="cue-stick-wrap">
-        <div class="cue-img" id="cue-img"></div>
-      </div>
-      <div id="pull-bar"></div>
-    </div>
-    <div id="pull-label">ä¸æ<br>æç</div>
-    <div id="pull-pct">0%</div>
-  </div>
-
-  <!-- Canvas -->
-  <div id="cw"><canvas id="c"></canvas></div>
-
-  <!-- Right HUD -->
-  <div id="side-hud">
-    <div class="phud">
-      <div class="p-color-bar p1-bar"></div>
-      <div class="plbl">PLAYER 1</div>
-      <div class="pname active-p1" id="pn1">P1</div>
-      <div class="ptype" id="pt1">æªå®</div>
-      <div class="pballs" id="pb1"></div>
-    </div>
-
-    <div class="divider"></div>
-
-    <div id="mid-hud">
-      <div id="msg-side">çæº<br>ä¸¦æç</div>
-      <div id="foul-side"></div>
-    </div>
-
-    <div class="divider"></div>
-
-    <div class="phud">
-      <div class="pballs" id="pb2"></div>
-      <div class="ptype" id="pt2">æªå®</div>
-      <div class="pname inactive" id="pn2">P2</div>
-      <div class="plbl">PLAYER 2</div>
-      <div class="p-color-bar p2-bar"></div>
-    </div>
-  </div>
-</div>
-
-<div id="ov">
-  <h1>8 BALL</h1>
-  <p>&#127921; å®æ©éäºº Â· æ©«åéç©</p>
-  <p class="hint">å·¦å´ä¸æçææç Â· å¨å°é¢æåçæº</p>
-  <button class="obtn" id="startBtn">éå§éæ²</button>
-</div>
-
-<script>
-(function(){
-"use strict";
-
-var BR=12, FRIC=0.9955, MINSPD=0.035, PR=18;
-var BDEFS={
-  0:['#f0ebe0',false], 1:['#f5c518',false], 2:['#1a6bb5',false],
-  3:['#dd2020',false], 4:['#6b2fa0',false], 5:['#e07020',false],
-  6:['#1a7a3a',false], 7:['#8b1a1a',false], 8:['#111111',false],
-  9:['#f5c518',true],  10:['#1a6bb5',true], 11:['#dd2020',true],
-  12:['#6b2fa0',true], 13:['#e07020',true], 14:['#1a7a3a',true],
-  15:['#8b1a1a',true]
-};
-// Player colors: 1=blue, 2=red
-var P_COLOR={1:'#3399ff',2:'#ff3355'};
-
-var canvas=document.getElementById('c');
-var ctx=canvas.getContext('2d');
-var W,H,TW,TH,BRD;
-var balls=[],pockets=[];
-var cur=1,ptype={1:null,2:null};
-var phase='idle',angle=0,power=0;
-var aimDrag=false,aimSX=0,aimSY=0;
-var pocketedTurn=[],firstHit=null;
-var needPlace=false,winner=null,foulTimer=null;
-var loopRunning=false;
-
-// Pull-to-shoot state
-var pullDragging=false,pullStartY=0,pullCurY=0;
-var PULL_MAX=130; // px travel = 100% power
-var cueTrack=document.getElementById('cue-track');
-var cueStickWrap=document.getElementById('cue-stick-wrap');
-var pullBar=document.getElementById('pull-bar');
-var pullPct=document.getElementById('pull-pct');
-
-// ââ Setup ââââââââââââââââââââââââââââââââââââââââââââââââ
-function setup(){
-  var cw=document.getElementById('cw');
-  var r=cw.getBoundingClientRect();
-  W=r.width;H=r.height;
-  canvas.width=W;canvas.height=H;
-  BRD=Math.round(Math.min(W,H)*0.065);
-  TW=W-BRD*2;TH=H-BRD*2;
-  makePockets();
-}
-
-function makePockets(){
-  var x0=BRD,x1=BRD+TW/2,x2=BRD+TW,y0=BRD,y1=BRD+TH;
-  pockets=[{x:x0,y:y0},{x:x1,y:y0-2},{x:x2,y:y0},
-           {x:x2,y:y1},{x:x1,y:y1+2},{x:x0,y:y1}];
-}
-
-function initBalls(){
-  balls=[];
-  var sp=BR*2.08;
-  var rx=BRD+TW*0.66,ry=BRD+TH/2;
-  var order=[1,2,9,3,8,10,4,11,7,12,6,13,14,15,5];
-  var idx=0;
-  for(var col=0;col<5;col++){
-    for(var row=0;row<=col;row++){
-      var bx=rx+col*sp*0.866;
-      var by=ry-col*sp*0.5+row*sp;
-      balls.push({n:order[idx++],x:bx,y:by,vx:0,vy:0,out:false});
-    }
-  }
-  balls.push({n:0,x:BRD+TW*0.26,y:BRD+TH/2,vx:0,vy:0,out:false});
-}
-
-function getCue(){
-  for(var i=0;i<balls.length;i++){if(balls[i].n===0&&!balls[i].out)return balls[i];}
-  return null;
-}
-
-// ââ Physics ââââââââââââââââââââââââââââââââââââââââââââââ
+// ── Physics ──────────────────────────────────────────────
 function step(){
   var i,j,a,b2,dx,dy,d,mn,nx,ny,ov,dot;
   var L=BRD,R=BRD+TW,T=BRD,Bo=BRD+TH;
@@ -658,7 +331,7 @@ function step(){
     if(a.y+BR>Bo){a.y=Bo-BR;a.vy=-Math.abs(a.vy)*0.75;}
   }
 
-  // 2. Ball-ball elastic collisions (equal mass â exchange normal velocity)
+  // 2. Ball-ball elastic collisions (equal mass → exchange normal velocity)
   for(i=0;i<balls.length-1;i++){
     a=balls[i];if(a.out)continue;
     for(j=i+1;j<balls.length;j++){
@@ -709,23 +382,23 @@ function settled(){
   return balls.every(function(b){return b.out||(Math.abs(b.vx)<MINSPD&&Math.abs(b.vy)<MINSPD);});
 }
 
-// ââ Shoot ââââââââââââââââââââââââââââââââââââââââââââââââ
+// ── Shoot ────────────────────────────────────────────────
 function shoot(){
   var cb=getCue();if(!cb||phase!=='aiming')return;
   if(power<2)return; // need some power
   firstHit=null;pocketedTurn=[];
   var spd=power*0.16;
   cb.vx=Math.cos(angle)*spd;cb.vy=Math.sin(angle)*spd;
-  phase='shooting';setMsg('çæ»¾åä¸­...');
+  phase='shooting';setMsg('球滾動中...');
   // Reset pull UI
   setPullUI(0);
 }
 
-// ââ Resolve ââââââââââââââââââââââââââââââââââââââââââââââ
+// ── Resolve ──────────────────────────────────────────────
 function resolve(){
   var myT=ptype[cur],opp=cur===1?2:1;
   var foul=false,fouMsg='',switchT=true;
-  if(pocketedTurn.indexOf(0)>=0){foul=true;fouMsg='æ¯çè½è¢ï¼å¯èªç±æ¾ç½®';needPlace=true;}
+  if(pocketedTurn.indexOf(0)>=0){foul=true;fouMsg='母球落袋！可自由放置';needPlace=true;}
   if(pocketedTurn.indexOf(8)>=0){
     var myNums=myT==='solid'?[1,2,3,4,5,6,7]:[9,10,11,12,13,14,15];
     var left=balls.filter(function(b){return myNums.indexOf(b.n)>=0&&!b.out;});
@@ -733,10 +406,10 @@ function resolve(){
     phase='done';setTimeout(showWin,400);return;
   }
   if(!foul){
-    if(firstHit===null){foul=true;fouMsg='æªæä¸­ä»»ä½çï¼';}
-    else if(myT===null){if(firstHit==='eight'){foul=true;fouMsg='éå±ä¸è½åæ8èçï¼';}}
-    else if(myT==='solid'){if(firstHit!=='solid'){foul=true;fouMsg='å¿é åæå¯¦å¿çï¼1-7ï¼ï¼';}}
-    else{if(firstHit!=='stripe'){foul=true;fouMsg='å¿é åææ¢ç´çï¼9-15ï¼ï¼';}}
+    if(firstHit===null){foul=true;fouMsg='未擊中任何球！';}
+    else if(myT===null){if(firstHit==='eight'){foul=true;fouMsg='開局不能先打8號球！';}}
+    else if(myT==='solid'){if(firstHit!=='solid'){foul=true;fouMsg='必須先擊實心球（1-7）！';}}
+    else{if(firstHit!=='stripe'){foul=true;fouMsg='必須先擊條紋球（9-15）！';}}
   }
   if(!foul&&myT===null&&pocketedTurn.length>0){
     var solids=pocketedTurn.filter(function(n){return n>=1&&n<=7;});
@@ -753,11 +426,11 @@ function resolve(){
   if(foul){switchT=true;showFoul(fouMsg);}else{clearFoul();}
   if(switchT)cur=opp;
   updateHUD();
-  if(needPlace){phase='placing';setMsg('é»æå·¦å´æ¾ç½®æ¯ç');}
-  else{phase='aiming';setMsg('ç©å®¶'+cur+' åºæ¡¿');}
+  if(needPlace){phase='placing';setMsg('點擊左側放置母球');}
+  else{phase='aiming';setMsg('玩家'+cur+' 出桿');}
 }
 
-// ââ Aim helper âââââââââââââââââââââââââââââââââââââââââââ
+// ── Aim helper ───────────────────────────────────────────
 // Returns whether aiming at a "wrong" ball (foul warning)
 function isAimFoul(){
   var al=aimLine();
@@ -805,7 +478,7 @@ function aimLine(){
   return{sx:cb.x,sy:cb.y,ex:gx,ey:gy,hit:hitB,tB:tB};
 }
 
-// ââ Draw âââââââââââââââââââââââââââââââââââââââââââââââââ
+// ── Draw ─────────────────────────────────────────────────
 function drawTable(){
   ctx.fillStyle='#6b3a18';ctx.fillRect(0,0,W,H);
   ctx.fillStyle='#7d4520';ctx.fillRect(2,2,W-4,H-4);
@@ -903,7 +576,7 @@ function drawCueOnCanvas(){
     }
     ctx.setLineDash([]);ctx.restore();
 
-    // â Foul warning symbol on hit ball
+    // ⛔ Foul warning symbol on hit ball
     if(foulWarn){
       ctx.save();ctx.translate(al.hit.x,al.hit.y);
       var sz=BR*1.15;
@@ -978,7 +651,7 @@ function drawPlace(){
   ctx.strokeRect(BRD,BRD,TW*0.26,TH);ctx.setLineDash([]);
   ctx.fillStyle='rgba(255,255,100,0.75)';ctx.font='bold 10px Arial';
   ctx.textAlign='center';ctx.textBaseline='middle';
-  ctx.fillText('é»æ­¤æ¾ç½®æ¯ç',BRD+TW*0.13,BRD+TH/2);ctx.restore();
+  ctx.fillText('點此放置母球',BRD+TW*0.13,BRD+TH/2);ctx.restore();
 }
 
 function render(){
@@ -987,7 +660,7 @@ function render(){
   for(var i=0;i<balls.length;i++)drawBall(balls[i]);
 }
 
-// ââ Main loop ââââââââââââââââââââââââââââââââââââââââââââ
+// ── Main loop ────────────────────────────────────────────
 function loop(){
   if(!loopRunning)return;
   if(phase==='shooting'){
@@ -998,7 +671,7 @@ function loop(){
   requestAnimationFrame(loop);
 }
 
-// ââ Pull-to-shoot control ââââââââââââââââââââââââââââââââ
+// ── Pull-to-shoot control ────────────────────────────────
 function setPullUI(pct){
   // pct = 0..100
   var maxH=130;
@@ -1054,7 +727,7 @@ cueTrack.addEventListener('touchstart',onPullDown,{passive:false});
 window.addEventListener('touchmove',function(e){if(pullDragging)onPullMove(e);},{passive:false});
 window.addEventListener('touchend',function(e){if(pullDragging)onPullUp(e);},{passive:false});
 
-// ââ Canvas aim input âââââââââââââââââââââââââââââââââââââ
+// ── Canvas aim input ─────────────────────────────────────
 function getXY(e){
   var r=canvas.getBoundingClientRect();
   if(e.touches&&e.touches.length)return{x:e.touches[0].clientX-r.left,y:e.touches[0].clientY-r.top};
@@ -1090,14 +763,14 @@ function placeCue(x,y){
   y=Math.max(BRD+BR+2,Math.min(BRD+TH-BR-2,y));
   for(var i=0;i<balls.length;i++){
     var b=balls[i];if(b.out||b.n===0)continue;
-    if(Math.sqrt((b.x-x)*(b.x-x)+(b.y-y)*(b.y-y))<BR*2+2){showFoul('æ­¤èæçï¼è«æä½ç½®');return;}
+    if(Math.sqrt((b.x-x)*(b.x-x)+(b.y-y)*(b.y-y))<BR*2+2){showFoul('此處有球，請換位置');return;}
   }
   var cb=null;
   for(var j=0;j<balls.length;j++){if(balls[j].n===0){cb=balls[j];break;}}
   if(cb){cb.x=x;cb.y=y;cb.out=false;cb.vx=0;cb.vy=0;}
   else balls.push({n:0,x:x,y:y,vx:0,vy:0,out:false});
   needPlace=false;clearFoul();phase='aiming';
-  setMsg('ç©å®¶'+cur+' åºæ¡¿');
+  setMsg('玩家'+cur+' 出桿');
 }
 
 canvas.addEventListener('mousedown',onDown);
@@ -1107,7 +780,7 @@ canvas.addEventListener('touchstart',onDown,{passive:false});
 canvas.addEventListener('touchmove',onMove,{passive:false});
 canvas.addEventListener('touchend',onUp,{passive:false});
 
-// ââ HUD ââââââââââââââââââââââââââââââââââââââââââââââââââ
+// ── HUD ──────────────────────────────────────────────────
 function updateHUD(){
   // Update left cue image color
   var cueImg=document.getElementById('cue-img');
@@ -1125,7 +798,7 @@ function updateHUD(){
     pn1.className='pname inactive';pn2.className='pname active-p2';
   }
   // Ball type labels
-  var ptypeLabels={null:'æªå®',solid:'å¯¦å¿ â',stripe:'æ¢ç´ â'};
+  var ptypeLabels={null:'未定',solid:'實心 ●',stripe:'條紋 ◑'};
   document.getElementById('pt1').textContent=ptypeLabels[ptype[1]];
   document.getElementById('pt2').textContent=ptypeLabels[ptype[2]];
   // Remaining balls
@@ -1142,34 +815,34 @@ function updateHUD(){
   });
 }
 
-function setMsg(t){document.getElementById('msg-side').innerHTML=t.replace(/Â·/g,'<br>');}
+function setMsg(t){document.getElementById('msg-side').innerHTML=t.replace(/·/g,'<br>');}
 function showFoul(t){
   clearTimeout(foulTimer);
-  document.getElementById('foul-side').textContent='â  '+t;
+  document.getElementById('foul-side').textContent='⚠ '+t;
   foulTimer=setTimeout(clearFoul,3500);
 }
 function clearFoul(){document.getElementById('foul-side').textContent='';}
 
-// ââ Win ââââââââââââââââââââââââââââââââââââââââââââââââââ
+// ── Win ──────────────────────────────────────────────────
 function showWin(){
   var ov=document.getElementById('ov');
   var col=P_COLOR[winner];
   ov.innerHTML='<h1 style="color:'+col+'">&#127921;</h1>'
-    +'<div class="win" style="color:'+col+'">ç©å®¶ '+winner+' ç²åï¼</div>'
-    +'<p>æ­åæåæé²8èçï¼</p>'
-    +'<button class="obtn" id="rb">åä¾ä¸å±</button>';
+    +'<div class="win" style="color:'+col+'">玩家 '+winner+' 獲勝！</div>'
+    +'<p>恭喜成功打進8號球！</p>'
+    +'<button class="obtn" id="rb">再來一局</button>';
   ov.style.display='flex';
   function restart(){startGame();}
   document.getElementById('rb').addEventListener('click',restart);
   document.getElementById('rb').addEventListener('touchend',function(e){e.preventDefault();restart();});
 }
 
-// ââ Start ââââââââââââââââââââââââââââââââââââââââââââââââ
+// ── Start ────────────────────────────────────────────────
 function startGame(){
   winner=null;cur=1;ptype={1:null,2:null};
   needPlace=false;pocketedTurn=[];firstHit=null;
   power=0;setPullUI(0);
-  clearFoul();setMsg('ç©å®¶1 åºæ¡¿');
+  clearFoul();setMsg('玩家1 出桿');
   initBalls();updateHUD();phase='aiming';
   document.getElementById('ov').style.display='none';
   if(!loopRunning){loopRunning=true;requestAnimationFrame(loop);}
