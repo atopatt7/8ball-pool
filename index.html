@@ -2,12 +2,13 @@
 <html lang="zh-TW">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, orientation=landscape">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>8 Ball Pool</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;}
 html,body{
   width:100%;height:100%;
+  height:100dvh;
   overflow:hidden;
   background:#0a0e14;
   touch-action:none;
@@ -30,9 +31,13 @@ html,body{
   #main{display:none;}
 }
 #main{
-  width:100vw;height:100vh;
+  width:100vw;height:100vh;height:100dvh;
   display:flex;flex-direction:row;
   overflow:hidden;
+  padding-bottom:env(safe-area-inset-bottom);
+  padding-left:env(safe-area-inset-left);
+  padding-right:env(safe-area-inset-right);
+  box-sizing:border-box;
 }
 
 /* ── LEFT: pull-to-shoot cue control ── */
@@ -314,249 +319,10 @@ function getCue(){
 
 // ── Physics ──────────────────────────────────────────────
 function step(){
-  var i,j,a,b2,dx,dy,d,mn,nx,ny,ov,dot;
-  var L=BRD,R=BRD+TW,T=BRD,Bo=BRD+TH;
-
-  // 1. Move & friction
-  for(i=0;i<balls.length;i++){
-    a=balls[i];if(a.out)continue;
-    a.x+=a.vx;a.y+=a.vy;
-    a.vx*=FRIC;a.vy*=FRIC;
-    // Only stop if truly slow (don't kill secondary hits prematurely)
-    if(Math.abs(a.vx)<MINSPD&&Math.abs(a.vy)<MINSPD){a.vx=0;a.vy=0;}
-    // Wall bounce (cushion restitution ~0.75)
-    if(a.x-BR<L){a.x=L+BR;a.vx=Math.abs(a.vx)*0.75;}
-    if(a.x+BR>R){a.x=R-BR;a.vx=-Math.abs(a.vx)*0.75;}
-    if(a.y-BR<T){a.y=T+BR;a.vy=Math.abs(a.vy)*0.75;}
-    if(a.y+BR>Bo){a.y=Bo-BR;a.vy=-Math.abs(a.vy)*0.75;}
-  }
-
-  // 2. Ball-ball elastic collisions (equal mass → exchange normal velocity)
-  for(i=0;i<balls.length-1;i++){
-    a=balls[i];if(a.out)continue;
-    for(j=i+1;j<balls.length;j++){
-      b2=balls[j];if(b2.out)continue;
-      dx=b2.x-a.x;dy=b2.y-a.y;
-      d=dx*dx+dy*dy;mn=BR*2;
-      if(d<mn*mn&&d>0.0001){
-        d=Math.sqrt(d);
-        // First-hit tracking
-        if(firstHit===null&&(a.n===0||b2.n===0)){
-          var oth=a.n===0?b2:a;
-          firstHit=oth.n===8?'eight':(oth.n<=7?'solid':'stripe');
-        }
-        nx=dx/d;ny=dy/d;
-        // Push apart so they no longer overlap
-        ov=(mn-d)*0.5;
-        a.x-=nx*ov;a.y-=ny*ov;
-        b2.x+=nx*ov;b2.y+=ny*ov;
-        // Relative velocity along normal
-        // For equal-mass elastic: exchange the normal components
-        var van=a.vx*nx+a.vy*ny;   // a's velocity along normal
-        var vbn=b2.vx*nx+b2.vy*ny; // b's velocity along normal
-        // Only resolve if balls approaching
-        if(van-vbn>0){
-          // Exchange normal components (perfectly elastic, equal mass)
-          a.vx+=( vbn-van)*nx;
-          a.vy+=( vbn-van)*ny;
-          b2.vx+=(van-vbn)*nx;
-          b2.vy+=(van-vbn)*ny;
-        }
-      }
-    }
-  }
-
-  // 3. Pocket check
-  for(i=0;i<balls.length;i++){
-    a=balls[i];if(a.out)continue;
-    for(j=0;j<pockets.length;j++){
-      var p=pockets[j];dx=a.x-p.x;dy=a.y-p.y;
-      if(dx*dx+dy*dy<PR*PR){
-        a.out=true;a.vx=0;a.vy=0;pocketedTurn.push(a.n);
-      }
-    }
-  }
-}
-
-function settled(){
-  return balls.every(function(b){return b.out||(Math.abs(b.vx)<MINSPD&&Math.abs(b.vy)<MINSPD);});
-}
-
-// ── Shoot ────────────────────────────────────────────────
-function shoot(){
-  var cb=getCue();if(!cb||phase!=='aiming')return;
-  if(power<2)return; // need some power
-  firstHit=null;pocketedTurn=[];
-  var spd=power*0.16;
-  cb.vx=Math.cos(angle)*spd;cb.vy=Math.sin(angle)*spd;
-  phase='shooting';setMsg('球滾動中...');
-  // Reset pull UI
-  setPullUI(0);
-}
-
-// ── Resolve ──────────────────────────────────────────────
-function resolve(){
-  var myT=ptype[cur],opp=cur===1?2:1;
-  var foul=false,fouMsg='',switchT=true;
-  if(pocketedTurn.indexOf(0)>=0){foul=true;fouMsg='母球落袋！可自由放置';needPlace=true;}
-  if(pocketedTurn.indexOf(8)>=0){
-    var myNums=myT==='solid'?[1,2,3,4,5,6,7]:[9,10,11,12,13,14,15];
-    var left=balls.filter(function(b){return myNums.indexOf(b.n)>=0&&!b.out;});
-    winner=(foul||left.length>0||firstHit!=='eight')?opp:cur;
-    phase='done';setTimeout(showWin,400);return;
-  }
-  if(!foul){
-    if(firstHit===null){foul=true;fouMsg='未擊中任何球！';}
-    else if(myT===null){if(firstHit==='eight'){foul=true;fouMsg='開局不能先打8號球！';}}
-    else if(myT==='solid'){if(firstHit!=='solid'){foul=true;fouMsg='必須先擊實心球（1-7）！';}}
-    else{if(firstHit!=='stripe'){foul=true;fouMsg='必須先擊條紋球（9-15）！';}}
-  }
-  if(!foul&&myT===null&&pocketedTurn.length>0){
-    var solids=pocketedTurn.filter(function(n){return n>=1&&n<=7;});
-    var stripes=pocketedTurn.filter(function(n){return n>=9&&n<=15;});
-    if(solids.length>0&&stripes.length===0){ptype[cur]='solid';ptype[opp]='stripe';}
-    else if(stripes.length>0&&solids.length===0){ptype[cur]='stripe';ptype[opp]='solid';}
-    myT=ptype[cur];
-  }
-  if(!foul&&pocketedTurn.length>0&&myT!==null){
-    var myNums2=myT==='solid'?[1,2,3,4,5,6,7]:[9,10,11,12,13,14,15];
-    var myPock=pocketedTurn.filter(function(n){return myNums2.indexOf(n)>=0;});
-    if(myPock.length>0)switchT=false;
-  }
-  if(foul){switchT=true;showFoul(fouMsg);}else{clearFoul();}
-  if(switchT)cur=opp;
-  updateHUD();
-  if(needPlace){phase='placing';setMsg('點擊左側放置母球');}
-  else{phase='aiming';setMsg('玩家'+cur+' 出桿');}
-}
-
-// ── Aim helper ───────────────────────────────────────────
-// Returns whether aiming at a "wrong" ball (foul warning)
-function isAimFoul(){
-  var al=aimLine();
-  if(!al||!al.hit)return false;
-  var myT=ptype[cur];
-  if(myT===null)return al.hit.n===8;
-  if(myT==='solid')return al.hit.n>8; // stripe or 8 before clearing
-  return al.hit.n>=1&&al.hit.n<=7;    // solid when should hit stripe
-}
-
-function aimLine(){
-  var cb=getCue();if(!cb)return null;
-  var L=BRD,R=BRD+TW,T=BRD,Bo=BRD+TH;
-  var dx=Math.cos(angle),dy=Math.sin(angle);
-
-  // Find wall intersection distance (for cue ball CENTER path)
-  var tWall=2000;
-  if(dx>0)tWall=Math.min(tWall,(R-cb.x-BR)/dx);
-  if(dx<0)tWall=Math.min(tWall,(L-cb.x+BR)/dx);
-  if(dy>0)tWall=Math.min(tWall,(Bo-cb.y-BR)/dy);
-  if(dy<0)tWall=Math.min(tWall,(T-cb.y+BR)/dy);
-
-  // Find closest ball hit using swept-circle (ghost ball method)
-  // The cue ball center travels along ray; it hits target when distance = 2*BR
-  var hitB=null,tB=tWall;
-  for(var i=0;i<balls.length;i++){
-    var b=balls[i];if(b.out||b.n===0)continue;
-    // Vector from cue center to target center
-    var fx=b.x-cb.x, fy=b.y-cb.y;
-    // Project target onto ray direction
-    var proj=fx*dx+fy*dy;
-    if(proj<0)continue; // target is behind
-    // Closest approach distance from ray to target center
-    var cx2=fx-proj*dx, cy2=fy-proj*dy;
-    var closeSq=cx2*cx2+cy2*cy2;
-    var dia=BR*2;
-    if(closeSq>dia*dia)continue; // ray misses
-    // Distance along ray where cue ball edge touches target
-    var t1=proj-Math.sqrt(dia*dia-closeSq);
-    if(t1>0.5&&t1<tB){tB=t1;hitB=b;}
-  }
-
-  // Ghost ball position = where cue ball CENTER is at moment of contact
-  var gx=cb.x+dx*tB, gy=cb.y+dy*tB;
-  return{sx:cb.x,sy:cb.y,ex:gx,ey:gy,hit:hitB,tB:tB};
-}
-
-// ── Draw ─────────────────────────────────────────────────
-function drawTable(){
-  ctx.fillStyle='#6b3a18';ctx.fillRect(0,0,W,H);
-  ctx.fillStyle='#7d4520';ctx.fillRect(2,2,W-4,H-4);
-  var gd=ctx.createRadialGradient(W/2,H/2,0,W/2,H/2,Math.max(W,H)*0.6);
-  gd.addColorStop(0,'#1e6b32');gd.addColorStop(1,'#0f3d1c');
-  ctx.fillStyle=gd;ctx.fillRect(BRD,BRD,TW,TH);
-  // spots
-  ctx.beginPath();ctx.arc(BRD+TW*0.26,BRD+TH/2,3,0,Math.PI*2);
-  ctx.fillStyle='rgba(255,255,255,0.18)';ctx.fill();
-  ctx.beginPath();ctx.arc(BRD+TW*0.66,BRD+TH/2,3,0,Math.PI*2);ctx.fill();
-  // baulk line
-  ctx.beginPath();ctx.moveTo(BRD+TW*0.26,BRD+5);ctx.lineTo(BRD+TW*0.26,BRD+TH-5);
-  ctx.strokeStyle='rgba(255,255,255,0.09)';ctx.lineWidth=1;ctx.setLineDash([4,5]);ctx.stroke();
-  ctx.setLineDash([]);
-  ctx.strokeStyle='rgba(255,200,100,0.1)';ctx.lineWidth=1;ctx.strokeRect(BRD,BRD,TW,TH);
-  // pockets
-  for(var i=0;i<pockets.length;i++){
-    var p=pockets[i];
-    var pg=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,PR+5);
-    pg.addColorStop(0,'#000');pg.addColorStop(0.65,'rgba(0,0,0,0.8)');pg.addColorStop(1,'rgba(0,0,0,0)');
-    ctx.beginPath();ctx.arc(p.x,p.y,PR+5,0,Math.PI*2);ctx.fillStyle=pg;ctx.fill();
-    ctx.beginPath();ctx.arc(p.x,p.y,PR,0,Math.PI*2);
-    ctx.fillStyle='#060606';ctx.fill();
-    ctx.strokeStyle='rgba(90,50,15,0.55)';ctx.lineWidth=2;ctx.stroke();
-  }
-}
-
-function drawBall(b){
-  if(b.out)return;
-  var def=BDEFS[b.n],fill=def[0],stripe=def[1];
-  ctx.save();ctx.translate(b.x,b.y);
-  ctx.shadowColor='rgba(0,0,0,0.55)';ctx.shadowBlur=8;ctx.shadowOffsetX=2;ctx.shadowOffsetY=2;
-  ctx.beginPath();ctx.arc(0,0,BR,0,Math.PI*2);
-  ctx.fillStyle=stripe?'#f0ebe0':fill;ctx.fill();
-  ctx.shadowColor='transparent';
-  if(stripe){
-    ctx.save();ctx.beginPath();ctx.arc(0,0,BR,0,Math.PI*2);ctx.clip();
-    ctx.fillStyle=fill;ctx.fillRect(-BR,-BR*0.47,BR*2,BR*0.94);ctx.restore();
-  }
-  var sh=ctx.createRadialGradient(-BR*0.28,-BR*0.32,0,0,0,BR);
-  sh.addColorStop(0,'rgba(255,255,255,0.56)');sh.addColorStop(0.38,'rgba(255,255,255,0.08)');sh.addColorStop(1,'rgba(0,0,0,0.2)');
-  ctx.beginPath();ctx.arc(0,0,BR,0,Math.PI*2);ctx.fillStyle=sh;ctx.fill();
-  if(b.n!==0){
-    ctx.beginPath();ctx.arc(0,0,BR*0.44,0,Math.PI*2);ctx.fillStyle='rgba(255,255,255,0.88)';ctx.fill();
-    ctx.fillStyle='#111';ctx.font='bold '+(b.n>=10?BR*0.46:BR*0.54)+'px Arial';
-    ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(String(b.n),0,1);
-  }
-  ctx.beginPath();ctx.arc(0,0,BR,0,Math.PI*2);
-  ctx.strokeStyle='rgba(0,0,0,0.2)';ctx.lineWidth=0.8;ctx.stroke();
-  ctx.restore();
-}
-
-function drawCueOnCanvas(){
-  if(phase!=='aiming')return;
-  var cb=getCue();if(!cb)return;
-  var al=aimLine();if(!al)return;
-  var foulWarn=isAimFoul();
-
-  // Aim line
-  ctx.save();ctx.setLineDash([7,7]);
-  ctx.strokeStyle=foulWarn?'rgba(255,80,80,0.45)':'rgba(255,255,200,0.32)';
-  ctx.lineWidth=1.5;
-  ctx.beginPath();ctx.moveTo(al.sx,al.sy);ctx.lineTo(al.ex,al.ey);ctx.stroke();
-  ctx.setLineDash([]);ctx.restore();
-
-  if(al.hit){
-    // Ghost ball at contact point
-    ctx.save();ctx.globalAlpha=0.4;ctx.beginPath();ctx.arc(al.ex,al.ey,BR,0,Math.PI*2);
-    ctx.strokeStyle=foulWarn?'#ff5555':'#fff';ctx.lineWidth=1.5;ctx.stroke();ctx.restore();
-
-    // Contact normal = direction from ghost-ball center to target center
-    var ndx=al.hit.x-al.ex, ndy=al.hit.y-al.ey;
-    var nl=Math.sqrt(ndx*ndx+ndy*ndy)||1;
-    ndx/=nl; ndy/=nl;
-
-    // Target ball travels along contact normal
-    ctx.save();ctx.globalAlpha=0.35;ctx.setLineDash([5,5]);
-    ctx.strokeStyle=foulWarn?'#ff5555':'#ffd700';ctx.lineWidth=1.5;
+  var i,j,a,b2,dx,dy,d,mn,nx,n|��ر����(��مȁ0�	I�H�	I�Q\�P�	I�	��	I�Q �((�����ĸ�5�ٔ����ɥ�ѥ��(����ȡ�����񉅱�̹����Ѡ������(�����������m�t��������Х���ѥ�Ք�(������������턹�������(���������I%턹���I%�(�������=����ѽ�������ձ�ͱ�܀�����Ё�����͕������䁡��́�ɕ����ɕ��(�������5�Ѡ���̡�����5%9MA��5�Ѡ���̡�����5%9MA�턹����턹������(�������]������չ������͡����ɕ�ѥ��ѥ�������Ԥ(����������	H�0�턹��0�	H턹���5�Ѡ���̡���न������(����������	H�H�턹��H�	H턹����5�Ѡ���̡���न������(����������	H�P�턹��P�	H턹���5�Ѡ���̡���䤨������(����������	H�	��턹��	��	H턹����5�Ѡ���̡���䤨������(���((�����ȸ�	�������������ѥ�������ͥ��̀���Յ�����̃�H��፡�������ɵ���ٕ������(����ȡ�����񉅱�̹����Ѡ��������(�����������m�t��������Х���ѥ�Ք�(������ȡ�������񉅱�̹����Ѡ������(��������������m�t�����ȹ��Х���ѥ�Ք�(����������ȹൄ������ȹ䵄���(���������ੑ୑䩑�����	H���(����������񵸩�����������ĥ�(����������5�Ѡ����С���(��������������е��Ё�Ʌ�����(����������������!������ձ�������������ȹ��������(����������مȁ�Ѡ�������������(���������������!����Ѡ������������М衽Ѡ������ͽ����耝��ɥ�����(���������(������������ཐ�����佐�(�����������A�͠�����Ёͼ�ѡ�䁹�������ȁ�ٕɱ��(����������������������(�������������੽�턹���䩽��(���������ȹ���੽��ȹ���䩽��(�����������I���ѥٔ�ٕ�����䁅�������ɵ��(������������ȁ��Յ�����́����ѥ�聕፡�����ѡ����ɵ�������������(��������مȁم�����੹ୄ��䩹�쀀������ٕ́�����䁅�������ɵ��(��������مȁى���ȹ�੹ୈȹ�䩹�쀼����ٕ́�����䁅�������ɵ��(�����������=���ɕͽ�ٔ��������́���ɽ������(�����������م��ى�����(�������������፡�������ɵ������������̀���ə��ѱ䁕���ѥ�����Յ�����̤(�����������������ى��م������(�����������������ى��م������(�����������ȹ����م��ى������(�����������ȹ����م��ى������(���������(�������(�����(���((�����̸�A����Ё�����(����ȡ�����񉅱�̹����Ѡ������(�����������m�t��������Х���ѥ�Ք�(������ȡ������������̹����Ѡ������(������مȁ���������m�t�������������������(����������ੑ୑䩑��AH�AH��(����������������Ք턹����턹����������ѕ�Q�ɸ���͠������(�������(�����(���)�()�չ�ѥ���͕�ѱ�����(��ɕ��ɸ�����̹�ٕ�䡙չ�ѥ������ɕ��ɸ��������5�Ѡ���̡�����5%9MA��5�Ѡ���̡�����5%9MA�����)�((����R�R �M���Ѓ�R�R�R�R�R�R�R�R�R�R�R�R�R�R�R�R�R�R�R�R�R�R�R�R�R�R�R�R�R�R�R�R�R�R�R�R�R�R�R�R�R�R�R�R�R�R�R�R )�չ�ѥ���͡��Р��(��مȁ������
+Ք��������������͔������������ɕ��ɸ�(�������ݕ��ȥɕ��ɸ쀼�������ͽ�����ݕ�(�������!����ձ�������ѕ�Q�ɸ�mt�(��مȁ������ݕȨ�����(��������5�Ѡ���̡����������퍈����5�Ѡ�ͥ�������������(�����͔��͡��ѥ����͕�5͜���B����.W�ⴸ�����(�����I�͕Ё�ձ��U$(��͕�Aձ�U$����)�((����R�R �I�ͽ�ٔ��R�R�R�R�R�R�R�R�R�R�R�R�R�R�R�R�R�R�R�R�R�R�R�R�R�R�R�R�R�R�R�R�R�R�R�R�R�R�R�R�R�R�R�R�R�R )�չ�ѥ���ɕͽ�ٔ���(��مȁ��P������m���t�����������������(��مȁ��հ����͔����5͜�����ݥэ�P���Ք�(����������ѕ�Q�ɸ������=��������홽հ���Ք홽�5͜����7�B�B���/���>����RǚR����������A�������Ք��(����������ѕ�Q�ɸ������=��������(����مȁ��9յ����P����ͽ�����lİȰ̰а԰ذ�t�l�����İ�Ȱ�̰�а��t�(����مȁ���������̹���ѕȡ�չ�ѥ������ɕ��ɸ���9յ̹�����=���������������������(����ݥ��������ձ�񱕙й����Ѡ�������!�Є�������М���������(�������͔��������͕�Q�����С͡��]��������ɕ��ɸ�(���(��������հ��(������������!������ձ��홽հ���Ք홽�5͜���r��N+�ⷒ���W�B�����(������͔������P����ձ�����������!����������М�홽հ���Ք홽�5͜���Z/����7���#�&L�f�B������(������͔������P����ͽ��������������!�Є���ͽ�����홽հ���Ք홽�5͜������#�#�N+������B�� Ĵ߾�'������(������͕���������!�Є�����ɥ����홽հ���Ք홽�5͜������#�#�N+��w��/�B�� ��׾�'������(���(��������հ����P����ձ��������ѕ�Q�ɸ�����Ѡ����(����مȁͽ����������ѕ�Q�ɸ����ѕȡ�չ�ѥ������ɕ��ɸ����Ę��������(����مȁ��ɥ���������ѕ�Q�ɸ����ѕȡ�չ�ѥ������ɕ��ɸ����䘙���������(�������ͽ���̹����Ѡ������ɥ��̹����Ѡ�����������m���t��ͽ����������m���t����ɥ�����(������͔������ɥ��̹����Ѡ����ͽ���̹����Ѡ�����������m���t����ɥ���������m���t��ͽ������(������P������m���t�(���(��������հ�������ѕ�Q�ɸ�����Ѡ������P����ձ���(����مȁ��9յ�����P����ͽ�����lİȰ̰а԰ذ�t�l�����İ�Ȱ�̰�а��t�(����مȁ��A���������ѕ�Q�ɸ����ѕȡ�չ�ѥ������ɕ��ɸ���9յ�ȹ�����=�����������(���������A��������Ѡ����ݥэ�P����͔�(���(�������հ���ݥэ�P���Ք�͡���հ����5͜�����͕퍱����հ����(������ݥэ�P���������(������ѕ!U���(���������A���������͔�����������͕�5͜����{�N+�ޛ�ӚR������7�B����(����͕����͔����������͕�5͜���:���؜���Ȭ��뚆|����)�((����R�R ���������ȃ�R�R�R�R�R�R�R�R�R�R�R�R�R�R�R�R�R�R�R�R�R�R�R�R�R�R�R�R�R�R�R�R�R�R�R�R�R�R�R�R�R�R�R (���I���ɹ́ݡ�ѡ�ȁ��������Ё����ɽ������������հ�݅ɹ����)�չ�ѥ��������հ���(��مȁ������1������(����������������Хɕ��ɸ����͔�(��مȁ��P������m���t�(�������P����ձ��ɕ��ɸ������й������(�������P����ͽ�����ɕ��ɸ������й���쀼����ɥ����Ȁ������ɔ�����ɥ��(��ɕ��ɸ������й���Ę������й����쀀�����ͽ����ݡ���͡�ձ����Ё��ɥ��)�()�չ�ѥ������1������(��مȁ������
+Ք����������ɕ��ɸ��ձ��(��مȁ0�	I�H�	I�Q\�P�	I�	��	I�Q �(��مȁ���5�Ѡ���̡����������5�Ѡ�ͥ���������((���������݅�����ѕ�͕�ѥ������х�������ȁ�Ք������
+9QH���Ѡ�(��مȁ�]���������(�����������]����5�Ѡ������]�����H�����	H�����(�����������]����5�Ѡ������]�����0�����	H�����(�����������]����5�Ѡ������]�����	������	H�����(�����������]����5�Ѡ������]�����P�����	H�����((������������͕�Ё�������Ё�ͥ��7vWB�6�&6�R�v��7B&���WF��B����F�R7VR&��6V�FW"G&fV�2���r&���B��G2F&vWBv�V�F�7F�6R�"�% �f"��D#��V���D#�Ev�ð�f�"�f"�����&��2��V�wF��������f"#�&��5��Ӷ�b�"��WG��"������6��F��VS����fV7F�"g&��7VR6V�FW"F�F&vWB6V�FW �f"g��"��6"��g��"��6"瓰���&��V7BF&vWB��F�&�F�&V7F���f"&���g��G��g��G����b�&����6��F��VS���F&vWB�2&V���@���6��6W7B&�6�F�7F�6Rg&��&�F�F&vWB6V�FW �f"7�#�g��&���G��7�#�g��&���G���f"6��6U7�7�"�7�"�7�"�7�#��f"F��%"�#���b�6��6U7�F��F��6��F��VS���&�֗76W0���F�7F�6R���r&�v�W&R7VR&��VFvRF�V6�W2F&vW@�f"C�&����F��7'B�F��F��6��6U7����b�C��RbgC�D"��D#�C���D#�#�ТР���v��7B&���6�F����v�W&R7VR&��4T�DU"�2B���V�B�b6��F7@�f"w��6"炶G��D"�w��6"璶G��D#��&WGW&�7��6"��7��6"��W��w��W��w�Ɔ�C���D"�D#�D'Ӱ�Р���)H)HG&r)H)H)H)H)H)H)H)H)H)H)H)H)H)H)H)H)H)H)H)H)H)H)H)H)H)H)H)H)H)H)H)H)H)H)H)H)H)H)H)H)H)H)H)H)H)H)H)H)H �gV�7F���G&uF&�R����7G��f���7G��S�r3f#6�s�7G��f���&V7B���rĂ���7G��f���7G��S�r3vCCS#s�7G��f���&V7B�"�"�r�BĂ�B���f"vC�7G��7&VFU&F��w&F�V�B�r�"Ă�"��r�"Ă�"��F�����rĂ���b���vB�FD6���%7F���r3Sf#3"r��vB�FD6���%7F���r3c6C2r���7G��f���7G��S�vC�7G��f���&V7B�%$B�%$B�Er�D������7�G0�7G��&Vv��F����7G��&2�%$B�Er��#b�%$B�D��"�2���F����"���7G��f���7G��S�w&v&�#SR�#SR�#SR����s�7G��f�����7G��&Vv��F����7G��&2�%$B�Er��cb�%$B�D��"�2���F����"��7G��f�������&VƲƖ�P�7G��&Vv��F����7G����fUF�%$B�Er��#b�%$B�R��7G��Ɩ�UF�%$B�Er��#b�%$B�D��R���7G��7G&��U7G��S�w&v&�#SR�#SR�#SR����s�7G��Ɩ�Uv�GF���7G��6WDƖ�TF6���B�Uғ�7G��7G&��R����7G��6WDƖ�TF6���ғ��7G��7G&��U7G��S�w&v&�#SR�#����s�7G��Ɩ�Uv�GF���7G��7G&��U&V7B�%$B�%$B�Er�D�������6�WG0�f�"�f"������6�WG2��V�wF��������f"��6�WG5��Ӱ�f"s�7G��7&VFU&F��w&F�V�B����������"�R���r�FD6���%7F���r3r��r�FD6���%7F���cR�w&v&����をr��r�FD6���%7F���w&v&�����r���7G��&Vv��F����7G��&2�����"�R���F����"��7G��f���7G��S�s�7G��f�����7G��&Vv��F����7G��&2�����"���F����"���7G��f���7G��S�r3ccbs�7G��f�����7G��7G&��U7G��S�w&v&���S�R��SR�s�7G��Ɩ�Uv�GF��#�7G��7G&��R����ЧР�gV�7F���G&t&�"����b�"��WB�&WGW&㰢f"FVc�$DTe5�"����f����FVe���7G&�S�FVe�Ӱ�7G��6fR���7G��G&�6�FR�"��"璓��7G��6�F�t6���#�w&v&�����SR�s�7G��6�F�t&�W#Ӄ�7G��6�F�t�fg6WE��#�7G��6�F�t�fg6WE��#��7G��&Vv��F����7G��&2���%"���F����"���7G��f���7G��S�7G&�S�r6cV&Ss�f��ö7G��f�����7G��6�F�t6���#�wG&�7&V�Bs���b�7G&�R���7G��6fR���7G��&Vv��F����7G��&2���%"���F����"��7G��6Ɨ����7G��f���7G��S�f��ö7G��f���&V7B��%"��%"��Cr�%"�"�%"��B��7G��&W7F�&R����Тf"6��7G��7&VFU&F��w&F�V�B��%"��#���%"��3"����%"���6��FD6���%7F���w&v&�#SR�#SR�#SR��Sb�r��6��FD6���%7F���3��w&v&�#SR�#SR�#SR����r��6��FD6���%7F���w&v&�����"�r���7G��&Vv��F����7G��&2���%"���F����"��7G��f���7G��S�6��7G��f������b�"�������7G��&Vv��F����7G��&2���%"��CB���F����"��7G��f���7G��S�w&v&�#SR�#SR�#SR�ヂ�s�7G��f�����7G��f���7G��S�r3s�7G��f��C�v&��Br��"�����%"��Cc�%"��SB��w�&��s��7G��FW�DƖv��v6V�FW"s�7G��FW�D&6VƖ�S�v֖FF�Rs�7G��f���FW�B�7G&��r�"�������Т7G��&Vv��F����7G��&2���%"���F����"���7G��7G&��U7G��S�w&v&�����"�s�7G��Ɩ�Uv�GF��ヶ7G��7G&��R����7G��&W7F�&R����Р�gV�7F���G&t7VT��6�f2�����b��6R��v�֖�rr�&WGW&㰢f"6#�vWD7VR����b�6"�&WGW&㰢f"����Ɩ�R����b�&WGW&㰢f"f�V�v&�֗4��f�V��������Ɩ�P�7G��6fR���7G��6WDƖ�TF6���r�uғ��7G��7G&��U7G��S�f�V�v&��w&v&�#SRÃÃ��CR�s�w&v&�#SR�#SR�#��3"�s��7G��Ɩ�Uv�GF���S��7G��&Vv��F����7G����fUF���7����7���7G��Ɩ�UF���W����W���7G��7G&��R����7G��6WDƖ�TF6���ғ�7G��&W7F�&R������b��憗B�����v��7B&��B6��F7B���@�7G��6fR���7G��v��&�����C�7G��&Vv��F����7G��&2���W����W��%"���F����"���7G��7G&��U7G��S�f�V�v&��r6fcSSSRs�r6ffbs�7G��Ɩ�Uv�GF���S�7G��7G&��R���7G��&W7F�&R�������6��F7B��&���F�&V7F���g&��v��7B�&��6V�FW"F�F&vWB6V�FW �f"�G���憗B����W���G���憗B����W���f"����F��7'B��G���G���G���G�������G����ò�G����ð����F&vWB&��G&fV�2���r6��F7B��&���7G��6fR���7G��v��&�����3S�7G��6WDƖ�TF6���R�Uғ��7G��7G&��U7G��S�f�V�v&��r6fcSSSRs�r6fd700';ctx.lineWidth=1.5;
     ctx.beginPath();ctx.moveTo(al.hit.x,al.hit.y);
     ctx.lineTo(al.hit.x+ndx*60,al.hit.y+ndy*60);
     ctx.stroke();
@@ -567,11 +333,11 @@ function drawCueOnCanvas(){
     // Component of incoming velocity perpendicular to normal = cue ball's post-collision velocity
     var dot=ivx*ndx+ivy*ndy;
     var cvx=ivx-dot*ndx, cvy=ivy-dot*ndy; // tangential component
-    var cl=Math.sqrt(cvx*cvx+cvy*cvy);
+    var cl=Math.sqrt(cvx*cvx+ cvy*cvy);
     if(cl>0.05){
       ctx.strokeStyle='rgba(180,220,255,0.45)';ctx.lineWidth=1.2;
       ctx.beginPath();ctx.moveTo(al.ex,al.ey);
-      ctx.lineTo(al.ex+cvx/cl*50,al.ey+cvy/cl*50);
+      ctx.lineTo(al.ex+cvx/cl*50,al.ey+ cvy/cl*50);
       ctx.stroke();
     }
     ctx.setLineDash([]);ctx.restore();
@@ -788,7 +554,7 @@ function updateHUD(){
   cueImg.style.background='linear-gradient(180deg,'+pc+' 0%,'+pc+' 18%,#c49a30 28%,#9a7520 55%,#6a4a10 85%,#3a2808 100%)';
   cueImg.style.boxShadow='2px 0 12px '+pc+'88';
   // Cue track border glow
-  cueTrack.style.borderColor=pc+'66';
+  cueTrack.style.borderColor=pc+'66+;
   // Player name active state
   var pn1=document.getElementById('pn1');
   var pn2=document.getElementById('pn2');
@@ -829,7 +595,7 @@ function showWin(){
   var col=P_COLOR[winner];
   ov.innerHTML='<h1 style="color:'+col+'">&#127921;</h1>'
     +'<div class="win" style="color:'+col+'">玩家 '+winner+' 獲勝！</div>'
-    +'<p>恭喜成功打進8號球！</p>'
+    +'<p>灭喜成功打進8號球！</p>'
     +'<button class="obtn" id="rb">再來一局</button>';
   ov.style.display='flex';
   function restart(){startGame();}
@@ -849,14 +615,4 @@ function startGame(){
 }
 
 document.getElementById('startBtn').addEventListener('click',startGame);
-document.getElementById('startBtn').addEventListener('touchend',function(e){e.preventDefault();startGame();});
-
-setup();
-window.addEventListener('resize',function(){
-  setup();if(phase!=='idle')initBalls();
-});
-
-})();
-</script>
-</body>
-</html>
+document.getElementById('startBtn').addEventListener('touch
